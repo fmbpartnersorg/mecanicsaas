@@ -64,27 +64,27 @@ export default async function VehiclePage({ params }: Props) {
       </Link>
 
       {/* Vehicle header */}
-      <div className="bg-card border border-border/60 rounded-2xl p-6 mb-8 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <Car className="w-6 h-6 text-primary" />
+      <div className="bg-card border border-border/60 rounded-2xl p-4 sm:p-6 mb-8 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5 sm:gap-4">
+          <div className="flex items-start sm:items-center gap-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-1 sm:mt-0">
+              <Car className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold font-mono tracking-widest text-foreground">
+              <h1 className="text-2xl sm:text-3xl font-bold font-mono tracking-widest text-foreground">
                 {v.plate_number}
               </h1>
-              <p className="text-sm font-medium text-muted-foreground mt-1">
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-1">
                 {[v.brand, v.model].filter(Boolean).join(' ') || 'Sin modelo registrado'}
                 {metadata?.cc && ` · ${metadata.cc}cc`}
               </p>
             </div>
           </div>
           
-          <div className="flex flex-col items-end gap-3 shrink-0">
+          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 w-full sm:w-auto shrink-0 border-t sm:border-0 border-border/40 pt-4 sm:pt-0">
             {activeJob && (
               <Badge
-                className={`${STATUS_COLORS[activeJob.status]} border text-xs tracking-wider uppercase font-semibold shrink-0`}
+                className={`${STATUS_COLORS[activeJob.status]} border text-[10px] sm:text-xs tracking-wider uppercase font-semibold shrink-0`}
               >
                 {STATUS_LABELS[activeJob.status]}
               </Badge>

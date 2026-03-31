@@ -103,11 +103,11 @@ export default function JobBoard({ initialJobs }: Props) {
   const jobs = initialJobs
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="flex sm:grid sm:grid-cols-3 gap-4 overflow-x-auto pb-4 snap-x snap-mandatory touch-pan-x hide-scrollbars -mx-4 px-4 sm:mx-0 sm:px-0">
       {COLUMNS.map(({ status, label, nextStatus, nextLabel }) => {
         const columnJobs = jobs.filter((j) => j.status === status)
         return (
-          <div key={status}>
+          <div key={status} className="min-w-[85vw] sm:min-w-0 snap-center shrink-0 flex flex-col">
             {/* Column header */}
             <div className="flex items-center gap-2 mb-3">
               <Badge
@@ -121,9 +121,9 @@ export default function JobBoard({ initialJobs }: Props) {
             </div>
 
             {/* Cards */}
-            <div className="space-y-2 min-h-24">
+            <div className="space-y-2 min-h-[300px] flex-1">
               {columnJobs.length === 0 ? (
-                <div className="border border-dashed border-border rounded-xl py-8 text-center text-xs text-muted-foreground/40">
+                <div className="border border-dashed border-border rounded-xl py-8 text-center text-xs text-muted-foreground/40 h-full flex items-center justify-center">
                   Sin trabajos
                 </div>
               ) : (

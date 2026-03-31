@@ -91,4 +91,12 @@
     backdrop-filter: blur(12px);
     border: 1px solid oklch(from var(--border) l c h / 0.6);
   }
+
+  .hide-scrollbars {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .hide-scrollbars::-webkit-scrollbar {
+    display: none;
+  }
 }

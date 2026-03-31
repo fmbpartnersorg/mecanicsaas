@@ -27,10 +27,10 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="h-screen w-full bg-background flex overflow-hidden selection:bg-primary/20">
+    <div className="h-screen w-full bg-background flex flex-col md:flex-row overflow-hidden selection:bg-primary/20">
       <DashboardNav user={user} workshop={workshop} profile={profile} />
       <main className="flex-1 overflow-y-auto w-full relative">
-        <div className="container mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12 max-w-6xl">
+        <div className="container mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-12 max-w-6xl flex flex-col min-h-full">
           {children}
         </div>
       </main>

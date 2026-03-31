@@ -46,9 +46,9 @@ export default function PlateSearch() {
           spellCheck={false}
           disabled={isPending}
           className="
-            w-full h-14 pl-12 pr-32
+            w-full h-12 md:h-14 pl-12 pr-28 md:pr-32
             bg-background border border-border/50 shadow-sm
-            rounded-xl text-xl font-mono tracking-widest
+            rounded-xl text-lg md:text-xl font-mono tracking-widest
             text-foreground placeholder:text-muted-foreground/30
             focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50
             transition-all disabled:opacity-60
@@ -60,9 +60,9 @@ export default function PlateSearch() {
           type="submit"
           disabled={!plate.trim() || isPending}
           className="
-            absolute right-1.5 top-1/2 -translate-y-1/2
-            h-11 px-6 rounded-lg
-            bg-primary text-primary-foreground text-sm font-semibold
+            absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2
+            h-9 md:h-11 px-4 md:px-6 rounded-lg
+            bg-primary text-primary-foreground text-xs md:text-sm font-semibold
             hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed
             shadow-sm hover:shadow-md
             transition-all duration-200

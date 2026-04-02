@@ -1,0 +1,289 @@
+'use client'
+
+import { useState, useTransition, useRef } from 'react'
+import { toast } from 'sonner'
+import { Plus, Loader2, Trash2, GripVertical, CheckCircle2, Circle, Clock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  createVehicleTask,
+  updateVehicleTaskStatus,
+  deleteVehicleTask,
+  type VehicleTask,
+  type TaskStatus,
+} from '@/lib/actions/vehicle-tasks'
+
+interface Props {
+  vehicleId: string
+  initialTasks: VehicleTask[]
+}
+
+const COLUMNS: {
+  key: TaskStatus
+  label: string
+  color: string
+  dot: string
+  bg: string
+  ring: string
+  icon: React.ElementType
+}[] = [
+  {
+    key: 'todo',
+    label: 'Pendiente',
+    color: 'text-amber-600',
+    dot: 'bg-amber-500',
+    bg: 'bg-amber-500/10',
+    ring: 'ring-amber-500/20',
+    icon: Circle,
+  },
+  {
+    key: 'in_progress',
+    label: 'En progreso',
+    color: 'text-blue-600',
+    dot: 'bg-blue-500',
+    bg: 'bg-blue-500/10',
+    ring: 'ring-blue-500/20',
+    icon: Clock,
+  },
+  {
+    key: 'done',
+    label: 'Terminado',
+    color: 'text-emerald-600',
+    dot: 'bg-emerald-500',
+    bg: 'bg-emerald-500/10',
+    ring: 'ring-emerald-500/20',
+    icon: CheckCircle2,
+  },
+]
+
+export default function VehicleTodoList({ vehicleId, initialTasks }: Props) {
+  const [tasks, setTasks] = useState<VehicleTask[]>(initialTasks)
+  const [newTitle, setNewTitle] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null)
+  const dragNode = useRef<HTMLDivElement | null>(null)
+
+  function handleAdd() {
+    if (!newTitle.trim()) return
+    const title = newTitle.trim()
+    setNewTitle('')
+
+    const optimistic: VehicleTask = {
+      id: `opt-${Date.now()}`,
+      vehicle_id: vehicleId,
+      workshop_id: '',
+      title,
+      status: 'todo',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    setTasks((prev) => [...prev, optimistic])
+
+    startTransition(async () => {
+      const { task, error } = await createVehicleTask(vehicleId, title)
+      if (error) {
+        toast.error(error)
+        setTasks((prev) => prev.filter((t) => t.id !== optimistic.id))
+        return
+      }
+      setTasks((prev) => prev.map((t) => (t.id === optimistic.id ? task! : t)))
+      toast.success('Tarea agregada')
+    })
+  }
+
+  function handleStatusChange(taskId: string, status: TaskStatus) {
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)))
+    startTransition(async () => {
+      const { error } = await updateVehicleTaskStatus(taskId, status, vehicleId)
+      if (error) {
+        toast.error(error)
+        setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: t.status } : t)))
+      }
+    })
+  }
+
+  function handleDelete(taskId: string) {
+    setDeletingId(taskId)
+    setTasks((prev) => prev.filter((t) => t.id !== taskId))
+    startTransition(async () => {
+      const { error } = await deleteVehicleTask(taskId, vehicleId)
+      if (error) toast.error(error)
+      setDeletingId(null)
+    })
+  }
+
+  function handleDragStart(e: React.DragEvent, taskId: string) {
+    setDraggingId(taskId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  function handleDragOver(e: React.DragEvent, col: TaskStatus) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverCol(col)
+  }
+
+  function handleDrop(e: React.DragEvent, col: TaskStatus) {
+    e.preventDefault()
+    if (!draggingId) return
+    const task = tasks.find((t) => t.id === draggingId)
+    if (task && task.status !== col) handleStatusChange(draggingId, col)
+    setDraggingId(null)
+    setDragOverCol(null)
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null)
+    setDragOverCol(null)
+  }
+
+  const totalDone = tasks.filter((t) => t.status === 'done').length
+  const progress = tasks.length > 0 ? Math.round((totalDone / tasks.length) * 100) : 0
+
+  return (
+    <div className="bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden">
+      {/* Panel header */}
+      <div className="px-6 py-4 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-base font-semibold">Tareas del vehículo</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {tasks.length === 0
+              ? 'Sin tareas aún'
+              : `${totalDone} de ${tasks.length} completadas`}
+          </p>
+        </div>
+
+        {/* Progress bar */}
+        {tasks.length > 0 && (
+          <div className="flex items-center gap-3 sm:w-56">
+            <div className="flex-1 h-1.5 bg-muted/60 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground tabular-nums w-8 text-right">
+              {progress}%
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Add task bar */}
+      <div className="px-6 py-4 border-b border-border/40 bg-muted/20">
+        <div className="flex gap-2">
+          <Input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            placeholder="Escribí una nueva tarea y presioná Enter… (ej: Cambiar pastillas de freno)"
+            className="h-10 bg-background border-border/50 text-sm"
+            disabled={isPending}
+          />
+          <Button
+            onClick={handleAdd}
+            disabled={isPending || !newTitle.trim()}
+            size="sm"
+            className="h-10 px-4 shrink-0 gap-1.5"
+          >
+            {isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Plus className="w-3.5 h-3.5" />
+            )}
+            Agregar
+          </Button>
+        </div>
+      </div>
+
+      {/* Kanban board */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-border/40">
+        {COLUMNS.map((col) => {
+          const colTasks = tasks.filter((t) => t.status === col.key)
+          const isOver = dragOverCol === col.key
+          const Icon = col.icon
+
+          return (
+            <div
+              key={col.key}
+              onDragOver={(e) => handleDragOver(e, col.key)}
+              onDrop={(e) => handleDrop(e, col.key)}
+              onDragLeave={() => setDragOverCol(null)}
+              className={`p-5 min-h-[260px] transition-colors duration-200 ${
+                isOver ? 'bg-primary/5' : ''
+              }`}
+            >
+              {/* Column header */}
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className={`w-2 h-2 rounded-full ${col.dot} shrink-0`} />
+                <span className={`text-xs font-semibold uppercase tracking-widest ${col.color}`}>
+                  {col.label}
+                </span>
+                <span className="ml-auto text-xs font-medium text-muted-foreground bg-muted/60 rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                  {colTasks.length}
+                </span>
+              </div>
+
+              {/* Drop zone hint */}
+              {colTasks.length === 0 && (
+                <div
+                  className={`flex items-center justify-center rounded-xl border border-dashed h-20 text-xs transition-all duration-200 ${
+                    isOver
+                      ? 'border-primary/50 text-primary/60 bg-primary/5 scale-[1.02]'
+                      : 'border-border/30 text-muted-foreground/40'
+                  }`}
+                >
+                  {isOver ? '↓ Soltar aquí' : 'Sin tareas'}
+                </div>
+              )}
+
+              {/* Task cards */}
+              <div className="space-y-2">
+                {colTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, task.id)}
+                    onDragEnd={handleDragEnd}
+                    ref={draggingId === task.id ? dragNode : undefined}
+                    className={`group flex items-start gap-2.5 p-3 rounded-xl border text-sm transition-all duration-150 cursor-grab active:cursor-grabbing select-none ${
+                      draggingId === task.id
+                        ? 'opacity-30 scale-95 border-primary/30 bg-primary/5'
+                        : 'bg-background border-border/40 hover:border-border/70 hover:shadow-sm'
+                    }`}
+                  >
+                    <GripVertical className="w-4 h-4 text-muted-foreground/25 group-hover:text-muted-foreground/50 mt-0.5 shrink-0 transition-colors" />
+                    <Icon
+                      className={`w-4 h-4 shrink-0 mt-0.5 ${col.color} ${
+                        col.key === 'done' ? 'opacity-70' : 'opacity-60'
+                      }`}
+                    />
+                    <span
+                      className={`flex-1 leading-snug wrap-break-word min-w-0 ${
+                        col.key === 'done'
+                          ? 'line-through text-muted-foreground/60'
+                          : 'text-foreground'
+                      }`}
+                    >
+                      {task.title}
+                    </span>
+                    <button
+                      onClick={() => handleDelete(task.id)}
+                      disabled={deletingId === task.id}
+                      title="Eliminar tarea"
+                      className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

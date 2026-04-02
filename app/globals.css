@@ -30,25 +30,25 @@
 
 :root {
   --radius: 0.5rem;
-  /* Dark theme as default — fondo casi negro, neutro */
-  --background: oklch(0.13 0 0);
-  --foreground: oklch(0.94 0 0);
-  --card: oklch(0.16 0 0);
-  --card-foreground: oklch(0.94 0 0);
-  --popover: oklch(0.16 0 0);
-  --popover-foreground: oklch(0.94 0 0);
-  --primary: oklch(0.60 0.18 250);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.20 0 0);
-  --secondary-foreground: oklch(0.80 0 0);
-  --muted: oklch(0.20 0 0);
+  /* Light theme — fondo blanco, primario naranja #ff6400 */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.15 0 0);
+  --card: oklch(0.97 0 0);
+  --card-foreground: oklch(0.15 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0 0);
+  --primary: oklch(0.62 0.20 37);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.93 0 0);
+  --secondary-foreground: oklch(0.25 0 0);
+  --muted: oklch(0.93 0 0);
   --muted-foreground: oklch(0.50 0 0);
-  --accent: oklch(0.22 0 0);
-  --accent-foreground: oklch(0.94 0 0);
+  --accent: oklch(0.95 0.02 37);
+  --accent-foreground: oklch(0.15 0 0);
   --destructive: oklch(0.55 0.22 25);
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.20 0 0);
-  --ring: oklch(0.60 0.18 250);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.92 0 0);
+  --ring: oklch(0.62 0.20 37);
 }
 
 @layer base {
@@ -61,8 +61,12 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+
   ::selection {
-    background: oklch(0.60 0.18 250 / 0.2);
+    background: oklch(0.62 0.20 37 / 0.15);
     color: var(--foreground);
   }
 
@@ -81,7 +85,7 @@
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.40 0 0);
+    background: oklch(0.75 0 0);
   }
 }
 
@@ -93,8 +97,8 @@
   }
 
   .hide-scrollbars {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
   .hide-scrollbars::-webkit-scrollbar {
     display: none;

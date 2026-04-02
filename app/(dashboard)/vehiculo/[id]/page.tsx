@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Badge } from '@/components/ui/badge'
-import RepairTimeline from '@/components/repair-timeline'
-import NewJobButton from '@/components/new-job-button'
 import VehicleActions from '@/components/vehicle-actions'
+import VehicleTodoList from '@/components/vehicle-todo-list'
+import WorkHistoryCarousel from '@/components/work-history-carousel'
 import Link from 'next/link'
-import { ChevronLeft, Car, Phone, User } from 'lucide-react'
-import type { Vehicle, RepairJob } from '@/lib/types'
-import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { ChevronLeft, Car, User, Phone, Gauge, Cpu } from 'lucide-react'
+import type { Vehicle } from '@/lib/types'
+import { getVehicleTasks } from '@/lib/actions/vehicle-tasks'
+import { getWorkHistory } from '@/lib/actions/work-history'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -38,102 +38,88 @@ export default async function VehiclePage({ params }: Props) {
 
   if (error || !vehicle) notFound()
 
-  const { data: jobs } = await supabase
-    .from('repair_jobs')
-    .select('*')
-    .eq('vehicle_id', id)
-    .order('created_at', { ascending: false })
-
   const v = vehicle as Vehicle
-  const repairJobs = (jobs ?? []) as RepairJob[]
   const metadata = v.vehicle_metadata as Record<string, string>
-
-  const activeJob = repairJobs.find(
-    (j) => j.status === 'pending' || j.status === 'in_progress'
-  )
+  const [tasks, workHistory] = await Promise.all([
+    getVehicleTasks(id),
+    getWorkHistory(id),
+  ])
 
   return (
-    <div className="max-w-2xl mx-auto animate-in fade-in duration-500">
+    <div className="animate-in fade-in duration-500 space-y-6">
       {/* Back */}
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
         Volver al comando
       </Link>
 
-      {/* Vehicle header */}
-      <div className="bg-card border border-border/60 rounded-2xl p-4 sm:p-6 mb-8 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5 sm:gap-4">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-1 sm:mt-0">
-              <Car className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+      {/* Vehicle header — full width, two-column layout */}
+      <div className="bg-card border border-border/60 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          {/* Left: icon + plate + model */}
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Car className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold font-mono tracking-widest text-foreground">
-                {v.plate_number}
-              </h1>
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-1">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-3xl font-bold font-mono tracking-widest text-foreground">
+                  {v.plate_number}
+                </h1>
+              </div>
+              <p className="text-sm text-muted-foreground mt-0.5">
                 {[v.brand, v.model].filter(Boolean).join(' ') || 'Sin modelo registrado'}
                 {metadata?.cc && ` · ${metadata.cc}cc`}
               </p>
             </div>
           </div>
-          
-          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 w-full sm:w-auto shrink-0 border-t sm:border-0 border-border/40 pt-4 sm:pt-0">
-            {activeJob && (
-              <Badge
-                className={`${STATUS_COLORS[activeJob.status]} border text-[10px] sm:text-xs tracking-wider uppercase font-semibold shrink-0`}
-              >
-                {STATUS_LABELS[activeJob.status]}
-              </Badge>
-            )}
-            <VehicleActions vehicle={v} />
-          </div>
+
+          {/* Right: actions */}
+          <VehicleActions vehicle={v} />
         </div>
 
-        {/* Client info */}
-        {(v.client_name || v.client_phone) && (
-          <div className="mt-4 pt-4 border-t border-border flex flex-col sm:flex-row gap-3">
+        {/* Info pills */}
+        {(v.client_name || v.client_phone || metadata?.vehicle_type || metadata?.cc) && (
+          <div className="mt-5 pt-5 border-t border-border/40 flex flex-wrap gap-3">
             {v.client_name && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <User className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-lg px-3 py-1.5">
+                <User className="w-3.5 h-3.5 shrink-0" />
                 <span>{v.client_name}</span>
               </div>
             )}
             {v.client_phone && (
               <a
                 href={`tel:${v.client_phone}`}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-lg px-3 py-1.5 hover:text-foreground transition-colors"
               >
-                <Phone className="w-3.5 h-3.5" />
+                <Phone className="w-3.5 h-3.5 shrink-0" />
                 <span>{v.client_phone}</span>
               </a>
+            )}
+            {metadata?.vehicle_type && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-lg px-3 py-1.5">
+                <Cpu className="w-3.5 h-3.5 shrink-0" />
+                <span className="capitalize">{metadata.vehicle_type}</span>
+              </div>
+            )}
+            {metadata?.cc && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-lg px-3 py-1.5">
+                <Gauge className="w-3.5 h-3.5 shrink-0" />
+                <span>{metadata.cc} cc</span>
+              </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Timeline header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-sm font-medium">Historial de trabajos</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {repairJobs.length} {repairJobs.length === 1 ? 'entrada' : 'entradas'}
-          </p>
-        </div>
-        <NewJobButton vehicleId={v.id} />
-      </div>
+      {/* Todo list — full width */}
+      <VehicleTodoList vehicleId={v.id} initialTasks={tasks} />
 
-      {/* Timeline */}
-      {repairJobs.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm border border-dashed border-border rounded-xl">
-          Sin trabajos registrados aún
-        </div>
-      ) : (
-        <RepairTimeline jobs={repairJobs} />
-      )}
+      {/* Work history carousel */}
+      <WorkHistoryCarousel sessions={workHistory} />
     </div>
   )
 }

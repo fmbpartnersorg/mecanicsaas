@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from 'react'
 import { toast } from 'sonner'
-import { Plus, Loader2, Trash2, GripVertical, CheckCircle2, Circle, Clock } from 'lucide-react'
+import { Plus, Loader2, Trash2, GripVertical, CheckCircle2, Circle, Clock, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -17,6 +17,8 @@ interface Props {
   vehicleId: string
   initialTasks: VehicleTask[]
 }
+
+const STATUSES: TaskStatus[] = ['todo', 'in_progress', 'done']
 
 const COLUMNS: {
   key: TaskStatus
@@ -55,6 +57,12 @@ const COLUMNS: {
     icon: CheckCircle2,
   },
 ]
+
+const NEXT_STATUS: Record<TaskStatus, TaskStatus | null> = {
+  todo: 'in_progress',
+  in_progress: 'done',
+  done: null,
+}
 
 export default function VehicleTodoList({ vehicleId, initialTasks }: Props) {
   const [tasks, setTasks] = useState<VehicleTask[]>(initialTasks)
@@ -114,6 +122,7 @@ export default function VehicleTodoList({ vehicleId, initialTasks }: Props) {
     })
   }
 
+  // ── Desktop: HTML5 drag & drop ──────────────────────────────────────────
   function handleDragStart(e: React.DragEvent, taskId: string) {
     setDraggingId(taskId)
     e.dataTransfer.effectAllowed = 'move'
@@ -135,6 +144,40 @@ export default function VehicleTodoList({ vehicleId, initialTasks }: Props) {
   }
 
   function handleDragEnd() {
+    setDraggingId(null)
+    setDragOverCol(null)
+  }
+
+  // ── Mobile: Touch drag & drop ───────────────────────────────────────────
+  function handleTouchStart(e: React.TouchEvent, taskId: string) {
+    setDraggingId(taskId)
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    e.preventDefault()
+    const touch = e.touches[0]
+    // Temporarily hide the dragged element so elementFromPoint finds the column beneath it
+    const draggingEl = dragNode.current
+    if (draggingEl) draggingEl.style.pointerEvents = 'none'
+    const el = document.elementFromPoint(touch.clientX, touch.clientY)
+    if (draggingEl) draggingEl.style.pointerEvents = ''
+
+    const colEl = el?.closest('[data-column]')
+    if (colEl) {
+      const col = colEl.getAttribute('data-column') as TaskStatus
+      setDragOverCol(col)
+    } else {
+      setDragOverCol(null)
+    }
+  }
+
+  function handleTouchEnd() {
+    if (draggingId && dragOverCol) {
+      const task = tasks.find((t) => t.id === draggingId)
+      if (task && task.status !== dragOverCol) {
+        handleStatusChange(draggingId, dragOverCol)
+      }
+    }
     setDraggingId(null)
     setDragOverCol(null)
   }
@@ -178,7 +221,7 @@ export default function VehicleTodoList({ vehicleId, initialTasks }: Props) {
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            placeholder="Escribí una nueva tarea y presioná Enter… (ej: Cambiar pastillas de freno)"
+            placeholder="Nueva tarea… (ej: Cambiar pastillas de freno)"
             className="h-10 bg-background border-border/50 text-sm"
             disabled={isPending}
           />
@@ -196,6 +239,11 @@ export default function VehicleTodoList({ vehicleId, initialTasks }: Props) {
             Agregar
           </Button>
         </div>
+
+        {/* Mobile hint */}
+        <p className="sm:hidden mt-2 text-[11px] text-muted-foreground/60">
+          Tocá el botón <ArrowRight className="inline w-3 h-3" /> en cada tarea para avanzar su estado.
+        </p>
       </div>
 
       {/* Kanban board */}
@@ -208,10 +256,11 @@ export default function VehicleTodoList({ vehicleId, initialTasks }: Props) {
           return (
             <div
               key={col.key}
+              data-column={col.key}
               onDragOver={(e) => handleDragOver(e, col.key)}
               onDrop={(e) => handleDrop(e, col.key)}
               onDragLeave={() => setDragOverCol(null)}
-              className={`p-5 min-h-[260px] transition-colors duration-200 ${
+              className={`p-5 min-h-[180px] transition-colors duration-200 ${
                 isOver ? 'bg-primary/5' : ''
               }`}
             >
@@ -229,7 +278,7 @@ export default function VehicleTodoList({ vehicleId, initialTasks }: Props) {
               {/* Drop zone hint */}
               {colTasks.length === 0 && (
                 <div
-                  className={`flex items-center justify-center rounded-xl border border-dashed h-20 text-xs transition-all duration-200 ${
+                  className={`flex items-center justify-center rounded-xl border border-dashed h-16 text-xs transition-all duration-200 ${
                     isOver
                       ? 'border-primary/50 text-primary/60 bg-primary/5 scale-[1.02]'
                       : 'border-border/30 text-muted-foreground/40'
@@ -241,44 +290,71 @@ export default function VehicleTodoList({ vehicleId, initialTasks }: Props) {
 
               {/* Task cards */}
               <div className="space-y-2">
-                {colTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, task.id)}
-                    onDragEnd={handleDragEnd}
-                    ref={draggingId === task.id ? dragNode : undefined}
-                    className={`group flex items-start gap-2.5 p-3 rounded-xl border text-sm transition-all duration-150 cursor-grab active:cursor-grabbing select-none ${
-                      draggingId === task.id
-                        ? 'opacity-30 scale-95 border-primary/30 bg-primary/5'
-                        : 'bg-background border-border/40 hover:border-border/70 hover:shadow-sm'
-                    }`}
-                  >
-                    <GripVertical className="w-4 h-4 text-muted-foreground/25 group-hover:text-muted-foreground/50 mt-0.5 shrink-0 transition-colors" />
-                    <Icon
-                      className={`w-4 h-4 shrink-0 mt-0.5 ${col.color} ${
-                        col.key === 'done' ? 'opacity-70' : 'opacity-60'
-                      }`}
-                    />
-                    <span
-                      className={`flex-1 leading-snug wrap-break-word min-w-0 ${
-                        col.key === 'done'
-                          ? 'line-through text-muted-foreground/60'
-                          : 'text-foreground'
+                {colTasks.map((task) => {
+                  const nextStatus = NEXT_STATUS[col.key]
+                  const nextCol = nextStatus ? COLUMNS.find((c) => c.key === nextStatus) : null
+
+                  return (
+                    <div
+                      key={task.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, task.id)}
+                      onDragEnd={handleDragEnd}
+                      onTouchStart={(e) => handleTouchStart(e, task.id)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      ref={draggingId === task.id ? dragNode : undefined}
+                      style={{ touchAction: 'none' }}
+                      className={`group flex items-start gap-2.5 p-3 rounded-xl border text-sm transition-all duration-150 cursor-grab active:cursor-grabbing select-none ${
+                        draggingId === task.id
+                          ? 'opacity-30 scale-95 border-primary/30 bg-primary/5'
+                          : 'bg-background border-border/40 hover:border-border/70 hover:shadow-sm'
                       }`}
                     >
-                      {task.title}
-                    </span>
-                    <button
-                      onClick={() => handleDelete(task.id)}
-                      disabled={deletingId === task.id}
-                      title="Eliminar tarea"
-                      className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-destructive"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+                      {/* Grab handle — solo se ve en desktop */}
+                      <GripVertical className="hidden sm:block w-4 h-4 text-muted-foreground/25 group-hover:text-muted-foreground/50 mt-0.5 shrink-0 transition-colors" />
+
+                      <Icon
+                        className={`w-4 h-4 shrink-0 mt-0.5 ${col.color} opacity-70`}
+                      />
+
+                      <span
+                        className={`flex-1 leading-snug wrap-break-word min-w-0 ${
+                          col.key === 'done'
+                            ? 'line-through text-muted-foreground/60'
+                            : 'text-foreground'
+                        }`}
+                      >
+                        {task.title}
+                      </span>
+
+                      <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                        {/* Botón avanzar estado — siempre visible en mobile, hover en desktop */}
+                        {nextCol && (
+                          <button
+                            onClick={() => handleStatusChange(task.id, nextStatus!)}
+                            title={`Mover a ${nextCol.label}`}
+                            className={`flex items-center justify-center w-6 h-6 rounded-md transition-all
+                              sm:opacity-0 sm:group-hover:opacity-100
+                              ${nextCol.bg} ${nextCol.color} hover:scale-110`}
+                          >
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        )}
+
+                        {/* Botón eliminar */}
+                        <button
+                          onClick={() => handleDelete(task.id)}
+                          disabled={deletingId === task.id}
+                          title="Eliminar tarea"
+                          className="flex items-center justify-center w-6 h-6 rounded-md transition-all sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )

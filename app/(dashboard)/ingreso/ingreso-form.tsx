@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createVehicle } from '@/lib/actions/vehicles'
 import { createRepairJob } from '@/lib/actions/repair-jobs'
+import { searchVehicleByPlate } from '@/lib/actions/vehicles'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -13,6 +14,19 @@ import Link from 'next/link'
 interface Props {
   initialPlate: string
   workshopType: string
+}
+
+const validacionMatriculaExistente = async (plate: string) => {
+  const existingPlates = await searchVehicleByPlate(plate);
+  if (existingPlates) {
+    toast.error(`La matrícula ${plate} ya existe en el sistema. Por favor, verifícala o ingresa una diferente.`, 
+      {   style: {
+      background: '#ff4d4f',
+      color: '#fff'
+      }},);
+    return true;
+  }
+  return false;
 }
 
 export default function IngresoForm({ initialPlate, workshopType }: Props) {
@@ -47,6 +61,10 @@ export default function IngresoForm({ initialPlate, workshopType }: Props) {
     if (!vehicle.plate_number.trim()) {
       toast.error('La matrícula es obligatoria')
       return
+    }
+
+    if (await validacionMatriculaExistente(vehicle.plate_number.trim())) {
+      return;
     }
 
     startTransition(async () => {

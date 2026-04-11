@@ -17,8 +17,8 @@ interface DashboardNavProps {
 }
 
 const navItems = [
-  { href: '/', label: 'Buscar patente', icon: Search },
-  { href: '/trabajos', label: 'Tablero de Trabajos', icon: ClipboardList },
+  { href: '/', label: 'Tablero', icon: ClipboardList },
+  ///{ href: '/trabajos', label: 'Tablero de Trabajos', icon: ClipboardList },
   { href: '/configuracion', label: 'Mi Taller', icon: Home },
 ]
 
